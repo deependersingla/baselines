@@ -1,5 +1,9 @@
 #!/usr/bin/env python
 import os, logging, gym
+import sys
+sys.path.append('..')
+sys.path.append('../..')
+sys.path.append("../../..")
 from baselines import logger
 from baselines.common import set_global_seeds
 from baselines import bench
