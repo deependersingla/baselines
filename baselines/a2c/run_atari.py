@@ -45,8 +45,8 @@ def main():
     parser.add_argument('--million_frames', help='How many frames to train (/ 1e6). '
         'This number gets divided by 4 due to frameskip', type=int, default=40)
     args = parser.parse_args()
-    train(args.env, num_frames=1e6 * args.million_frames, seed=args.seed, 
-        policy=args.policy, lrschedule=args.lrschedule, num_cpu=16)
+    train(args.env, num_frames=10000, seed=args.seed, 
+        policy=args.policy, lrschedule=args.lrschedule, num_cpu=2)
 
 if __name__ == '__main__':
     main()
