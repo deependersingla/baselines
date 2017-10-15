@@ -4,7 +4,7 @@ from baselines.a2c.utils import conv, fc, conv_to_fc, batch_to_seq, seq_to_batch
 from baselines.common.distributions import make_pdtype
 import baselines.common.tf_util as U
 import gym
-
+import ipdb
 class LnLstmPolicy(object):
     def __init__(self, sess, ob_space, ac_space, nenv, nsteps, nstack, nlstm=256, reuse=False):
         nbatch = nenv*nsteps
@@ -91,11 +91,12 @@ class LstmPolicy(object):
 class CnnPolicy(object):
 
     def __init__(self, sess, ob_space, ac_space, nenv, nsteps, nstack, reuse=False):
-        nbatch = nenv*nsteps
-        nh, nw, nc = ob_space.shape
+        nbatch = nenv*nsteps #TMAX*NumEnv
+        nh, nw, nc = ob_space.shape #PlaneDim*PlaneDim*1
         ob_shape = (nbatch, nh, nw, nc*nstack)
         nact = ac_space.n
         X = tf.placeholder(tf.uint8, ob_shape) #obs
+        ipdb.set_trace()
         with tf.variable_scope("model", reuse=reuse):
             h = conv(tf.cast(X, tf.float32)/255., 'c1', nf=32, rf=8, stride=4, init_scale=np.sqrt(2))
             h2 = conv(h, 'c2', nf=64, rf=4, stride=2, init_scale=np.sqrt(2))

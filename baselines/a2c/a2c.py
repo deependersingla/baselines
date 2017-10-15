@@ -26,8 +26,8 @@ class Model(object):
                                 inter_op_parallelism_threads=num_procs)
         config.gpu_options.allow_growth = True
         sess = tf.Session(config=config)
-        nact = ac_space.n
-        nbatch = nenvs*nsteps
+        nact = ac_space.n #num of actons
+        nbatch = nenvs*nsteps #nsteps = TMAX. Batch= TMAX*NumEnvs
 
         A = tf.placeholder(tf.int32, [nbatch])
         ADV = tf.placeholder(tf.float32, [nbatch])
@@ -51,7 +51,7 @@ class Model(object):
         trainer = tf.train.RMSPropOptimizer(learning_rate=LR, decay=alpha, epsilon=epsilon)
         _train = trainer.apply_gradients(grads)
 
-        lr = Scheduler(v=lr, nvalues=total_timesteps, schedule=lrschedule)
+        lr = Scheduler(v=lr, nvalues=total_timesteps, schedule=lrschedule)#decreases lr as steps inceases
 
         def train(obs, states, rewards, masks, actions, values):
             advs = rewards - values
@@ -100,7 +100,7 @@ class Runner(object):
         self.obs = np.zeros((nenv, nh, nw, nc*nstack), dtype=np.uint8)
         self.nc = nc
         obs = env.reset()
-        self.update_obs(obs)
+        self.update_obs(obs)#keeps latest 4 frames
         self.gamma = gamma
         self.nsteps = nsteps
         self.states = model.initial_state
@@ -115,19 +115,19 @@ class Runner(object):
     def run(self):
         mb_obs, mb_rewards, mb_actions, mb_values, mb_dones = [],[],[],[],[]
         mb_states = self.states
-        for n in range(self.nsteps):
-            actions, values, states = self.model.step(self.obs, self.states, self.dones)
+        for n in range(self.nsteps): #run tmax steps
+            actions, values, states = self.model.step(self.obs, self.states, self.dones) 
             mb_obs.append(np.copy(self.obs))
             mb_actions.append(actions)
             mb_values.append(values)
             mb_dones.append(self.dones)
-            obs, rewards, dones, _ = self.env.step(actions)
+            obs, rewards, dones, _ = self.env.step(actions) #Next obs after taking the step
             self.states = states
             self.dones = dones
             for n, done in enumerate(dones):
                 if done:
-                    self.obs[n] = self.obs[n]*0
-            self.update_obs(obs)
+                    self.obs[n] = self.obs[n]*0  #reset
+            self.update_obs(obs)#Roll the obs. keeps latest 4 frames
             mb_rewards.append(rewards)
         mb_dones.append(self.dones)
         #batch of steps to batch of rollouts
@@ -161,14 +161,14 @@ def learn(policy, env, seed, nsteps=5, nstack=4, total_timesteps=int(80e6), vf_c
     nenvs = env.num_envs
     ob_space = env.observation_space
     ac_space = env.action_space
-    num_procs = len(env.remotes) # HACK
+    num_procs = len(env.remotes) # Num of Threads/Envs
     model = Model(policy=policy, ob_space=ob_space, ac_space=ac_space, nenvs=nenvs, nsteps=nsteps, nstack=nstack, num_procs=num_procs, ent_coef=ent_coef, vf_coef=vf_coef,
         max_grad_norm=max_grad_norm, lr=lr, alpha=alpha, epsilon=epsilon, total_timesteps=total_timesteps, lrschedule=lrschedule)
     runner = Runner(env, model, nsteps=nsteps, nstack=nstack, gamma=gamma)
 
     nbatch = nenvs*nsteps
     tstart = time.time()
-    for update in range(1, total_timesteps//nbatch+1):
+    for update in range(1, total_timesteps//nbatch+1): #TOTAL STEPS/ NUM OF STEPS PER GRADIENT UPDATE
         obs, states, rewards, masks, actions, values = runner.run()
         policy_loss, value_loss, policy_entropy = model.train(obs, states, rewards, masks, actions, values)
         nseconds = time.time()-tstart
